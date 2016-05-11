@@ -291,11 +291,12 @@ public class JTAppleCalendarView: UIView {
     }
     
     /**  
-     Specifies custom cell size. Might be useful if you're using `.Vertical` scrolling direction. Will be ignored for `CGSizeZero`, which is its default value.
+     Specifies custom cell `width` : `height` ratio. Might be useful if you don't want your cell height gets compressed when using `.Vertical` scrolling direction.
      
-     - note: When ignored, the cell size will be configured by number of rows and current instance's `frame`.
+     - note: Ignores any value from zero to below. Has default value of zero.
+     - note: When ignored, the cell size will be calculated from instance's frame and `numberOfRowsPerMonth`.
      */
-    public var customCellSize = CGSizeZero
+    public var customCellSizeRatio = CGFloat(0)
     
     lazy private var calendarView : UICollectionView = {
         let layout = JTAppleCalendarHorizontalFlowLayout(withDelegate: self)
@@ -316,14 +317,18 @@ public class JTAppleCalendarView: UIView {
     
     private func updateLayoutItemSize (layout: JTAppleCalendarLayoutProtocol) {
         
-        if CGSizeEqualToSize(customCellSize, CGSizeZero) {
-            layout.itemSize = CGSizeMake(
-                self.calendarView.frame.size.width / CGFloat(MAX_NUMBER_OF_DAYS_IN_WEEK),
-                (self.calendarView.frame.size.height - layout.headerReferenceSize.height) / CGFloat(numberOfRowsPerMonth)
-            )
+        let calendarViewSize = self.calendarView.frame.size
+        
+        let itemWidth = calendarViewSize.width / CGFloat(MAX_NUMBER_OF_DAYS_IN_WEEK)
+        var itemHeight = CGFloat(0)
+        
+        if customCellSizeRatio > CGFloat(0) {
+            itemHeight = itemWidth / customCellSizeRatio
         } else {
-            layout.itemSize = customCellSize
+            itemHeight = (calendarViewSize.height - layout.headerReferenceSize.height) / CGFloat(numberOfRowsPerMonth)
         }
+        
+        layout.itemSize = CGSizeMake(itemWidth, itemHeight)
         
         self.calendarView.collectionViewLayout = layout as! UICollectionViewLayout
     }
