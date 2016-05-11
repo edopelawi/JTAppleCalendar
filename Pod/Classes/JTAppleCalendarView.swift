@@ -199,7 +199,18 @@ public class JTAppleCalendarView: UIView {
         }
     }
     /// The object that acts as the delegate of the calendar view.
-    public var delegate : JTAppleCalendarViewDelegate?
+    public var delegate : JTAppleCalendarViewDelegate? {
+        didSet {            
+            if let validDelegate = delegate, let headerNib = validDelegate.headerViewNibForCalendar(self) {
+                
+                calendarView.registerNib(
+                    headerNib,
+                    forSupplementaryViewOfKind: UICollectionElementKindSectionHeader,
+                    withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier
+                )
+            }
+        }
+    }
     
     private var scrollToDatePathOnRowChange: NSDate?
     private var delayedExecutionClosure: (()->Void)?
@@ -392,15 +403,6 @@ public class JTAppleCalendarView: UIView {
         self.clipsToBounds = true
         self.calendarView.registerClass(JTAppleDayCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
         self.addSubview(self.calendarView)
-        
-        if let validDelegate = delegate, let headerNib = validDelegate.headerViewNibForCalendar(self) {
-            
-            calendarView.registerNib(
-                headerNib,
-                forSupplementaryViewOfKind: UICollectionElementKindSectionHeader,
-                withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier
-            )
-        }
     }
     
     /// Let's the calendar know which cell xib to use for the displaying of it's date-cells.
