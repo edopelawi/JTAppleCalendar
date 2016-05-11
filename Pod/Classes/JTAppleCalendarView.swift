@@ -235,9 +235,20 @@ public class JTAppleCalendarView: UIView {
         var page : Int = 0
         
         if self.direction == .Horizontal {
+           
             page = Int(floor(self.calendarView.contentOffset.x / cvbounds.size.width))
+        
         } else {
-            page = Int(floor(self.calendarView.contentOffset.y / (cvbounds.size.height + preferredHeaderSize.height)))
+            
+            var dateGroupHeight = cvbounds.height
+            
+            if let customLayout = calendarView.collectionViewLayout as? JTAppleCalendarVerticalFlowLayout {
+                dateGroupHeight = customLayout.itemSize.height * CGFloat(numberOfRowsPerMonth)
+            }
+            
+            let contentHeight = dateGroupHeight + preferredHeaderSize.height
+            
+            page = Int(floor(self.calendarView.contentOffset.y / contentHeight))
         }
         
         let totalSections = monthInfo.count * numberOfSectionsPerMonth
