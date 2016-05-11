@@ -228,6 +228,7 @@ public class JTAppleCalendarView: UIView {
     
     private var scrollToDatePathOnRowChange: NSDate?
     private var delayedExecutionClosure: (()->Void)?
+    
     private var currentSectionPage: Int {
         let cvbounds = self.calendarView.bounds
         var page : Int = 0
@@ -854,7 +855,7 @@ extension JTAppleCalendarView: UIScrollViewDelegate {
         delayedExecutionClosure = nil
     }
     
-    /// Tells the delegate that the scroll view has ended decelerating the scrolling movement.
+    // TODO: This part is buggy - especially when paging is not enabled.
     public func scrollViewDidScroll(scrollView: UIScrollView) {
         
         // Determing the section from the scrollView direction
