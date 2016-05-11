@@ -290,6 +290,13 @@ public class JTAppleCalendarView: UIView {
         }
     }
     
+    /**  
+     Specifies custom cell size. Might be useful if you're using `.Vertical` scrolling direction. Will be ignored for `CGSizeZero`, which is its default value.
+     
+     - note: When ignored, the cell size will be configured by number of rows and current instance's `frame`.
+     */
+    public var customCellSize = CGSizeZero
+    
     lazy private var calendarView : UICollectionView = {
         let layout = JTAppleCalendarHorizontalFlowLayout(withDelegate: self)
         layout.scrollDirection = self.direction
@@ -308,10 +315,16 @@ public class JTAppleCalendarView: UIView {
     }()
     
     private func updateLayoutItemSize (layout: JTAppleCalendarLayoutProtocol) {
-        layout.itemSize = CGSizeMake(
-            self.calendarView.frame.size.width / CGFloat(MAX_NUMBER_OF_DAYS_IN_WEEK),
-            (self.calendarView.frame.size.height - layout.headerReferenceSize.height) / CGFloat(numberOfRowsPerMonth)
-        )
+        
+        if CGSizeEqualToSize(customCellSize, CGSizeZero) {
+            layout.itemSize = CGSizeMake(
+                self.calendarView.frame.size.width / CGFloat(MAX_NUMBER_OF_DAYS_IN_WEEK),
+                (self.calendarView.frame.size.height - layout.headerReferenceSize.height) / CGFloat(numberOfRowsPerMonth)
+            )
+        } else {
+            layout.itemSize = customCellSize
+        }
+        
         self.calendarView.collectionViewLayout = layout as! UICollectionViewLayout
     }
     
