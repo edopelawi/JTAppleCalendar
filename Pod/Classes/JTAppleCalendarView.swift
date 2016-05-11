@@ -1048,14 +1048,23 @@ extension JTAppleCalendarView: UICollectionViewDataSource, UICollectionViewDeleg
     
     public func collectionView(collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionReusableView {
         
+        print("\(self.dynamicType): Requesting header view for kind: \(kind)")
+        
         guard kind == UICollectionElementKindSectionHeader else {
             return UICollectionReusableView()
         }
         
+        print("\(self.dynamicType): Dequeuing header view")
+        
         guard let headerView = collectionView.dequeueReusableSupplementaryViewOfKind(kind, withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier, forIndexPath: indexPath) as? JTAppleCalendarHeaderView else {
+            
+            print("\(self.dynamicType): Dequeuing failed :(!")
+            
             assert(false, "Make sure your registered header view is a subclass of JTAppleCalendarHeaderView.")
             return UICollectionReusableView()
         }
+        
+        print("\(self.dynamicType): Dequeuing succeds!")
         
         let date = dateFromPath(indexPath)!
         
