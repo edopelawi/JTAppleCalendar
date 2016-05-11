@@ -138,8 +138,9 @@ public protocol JTAppleCalendarViewDelegate {
      - parameter calendar: The `JTAppleCalendarView` that requests to this delegate.
      - parameter view:     `JTAppleCalendarHeaderView` instance.
      - parameter date:     `NSDate` instance.
+     - parameter dateOwner: `DateOWner` status of passed `date`.
      */
-    func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView headerView: JTAppleCalendarHeaderView, date: NSDate)
+    func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView headerView: JTAppleCalendarHeaderView, date: NSDate, dateOwner: CellState.DateOwner)
 }
 
 public extension JTAppleCalendarViewDelegate {
@@ -151,7 +152,7 @@ public extension JTAppleCalendarViewDelegate {
     func calendar(calendar : JTAppleCalendarView, isAboutToDisplayCell cell: JTAppleDayCellView, date:NSDate, cellState: CellState) {}
     
     func headerViewForCalendar(calendar : JTAppleCalendarView) -> (nib: UINib?, size:CGSize) {return (nil, CGSizeZero)}
-    func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView view: JTAppleCalendarHeaderView, date: NSDate) { }
+    func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView view: JTAppleCalendarHeaderView, date: NSDate, dateOwner: CellState.DateOwner) { }
 }
 
 /// An instance of JTAppleCalendarView (or simply, a calendar view) is a means for displaying and interacting with a gridstyle layout of date-cells
@@ -1067,27 +1068,24 @@ extension JTAppleCalendarView: UICollectionViewDataSource, UICollectionViewDeleg
     
     public func collectionView(collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionReusableView {
         
-        print("\(self.dynamicType): Requesting header view for kind: \(kind)")
-        
         guard kind == UICollectionElementKindSectionHeader else {
             return UICollectionReusableView()
         }
         
-        print("\(self.dynamicType): Dequeuing header view")
-        
         guard let headerView = collectionView.dequeueReusableSupplementaryViewOfKind(kind, withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier, forIndexPath: indexPath) as? JTAppleCalendarHeaderView else {
-            
-            print("\(self.dynamicType): Dequeuing failed :(!")
             
             assert(false, "Make sure your registered header view is a subclass of JTAppleCalendarHeaderView.")
             return UICollectionReusableView()
         }
         
-        print("\(self.dynamicType): Dequeuing succeds!")
         
-        let date = dateFromPath(indexPath)!
+        guard let validDate = dateFromPath(indexPath) else {
+            return UICollectionReusableView()
+        }
         
-        delegate?.calendar(self, isAboutToDisplayHeaderView: headerView, date: date)
+        let dateOwner = cellStateFromIndexPath(indexPath).dateBelongsTo
+        
+        delegate?.calendar(self, isAboutToDisplayHeaderView: headerView, date: validDate, dateOwner: dateOwner)
         
         return headerView
     }
