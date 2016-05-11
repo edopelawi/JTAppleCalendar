@@ -850,13 +850,12 @@ public class JTAppleCalendarView: UIView {
 extension JTAppleCalendarView: UIScrollViewDelegate {
     /// Tells the delegate when a scrolling animation in the scroll view concludes.
     public func scrollViewDidEndScrollingAnimation(scrollView: UIScrollView) {
-        scrollViewDidEndDecelerating(scrollView)
         delayedExecutionClosure?()
         delayedExecutionClosure = nil
     }
     
     /// Tells the delegate that the scroll view has ended decelerating the scrolling movement.
-    public func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
+    public func scrollViewDidScroll(scrollView: UIScrollView) {
         
         // Determing the section from the scrollView direction
         let section = currentSectionPage
@@ -995,7 +994,7 @@ extension JTAppleCalendarView: UICollectionViewDataSource, UICollectionViewDeleg
         }
         
         if monthInfo.count > 0 {
-            self.scrollViewDidEndDecelerating(self.calendarView)
+            self.scrollViewDidScroll(self.calendarView)
         }
         return monthInfo.count
     }
