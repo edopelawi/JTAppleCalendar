@@ -238,7 +238,13 @@ public class JTAppleCalendarView: UIView {
             page = Int(floor(self.calendarView.contentOffset.x / cvbounds.size.width))
         } else {
             
-            let contentHeight = cvbounds.size.height + preferredHeaderSize.height
+            var dateGroupHeight = cvbounds.height
+            
+            if let customLayout = calendarView.collectionViewLayout as? JTAppleCalendarVerticalFlowLayout {
+                dateGroupHeight = customLayout.itemSize.height * CGFloat(numberOfRowsPerMonth)
+            }
+            
+            let contentHeight = dateGroupHeight + preferredHeaderSize.height
             
             page = Int(floor(self.calendarView.contentOffset.y / contentHeight))
             
