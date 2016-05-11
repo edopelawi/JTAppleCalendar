@@ -230,13 +230,16 @@ public class JTAppleCalendarView: UIView {
     private var delayedExecutionClosure: (()->Void)?
     
     private var currentSectionPage: Int {
+        
         let cvbounds = self.calendarView.bounds
         var page : Int = 0
+        
         if self.direction == .Horizontal {
             page = Int(floor(self.calendarView.contentOffset.x / cvbounds.size.width))
         } else {
-            page = Int(floor(self.calendarView.contentOffset.y / cvbounds.size.height))
+            page = Int(floor(self.calendarView.contentOffset.y / (cvbounds.size.height + preferredHeaderSize.height)))
         }
+        
         let totalSections = monthInfo.count * numberOfSectionsPerMonth
         if page >= totalSections {return totalSections - 1}
         return page > 0 ? page : 0
