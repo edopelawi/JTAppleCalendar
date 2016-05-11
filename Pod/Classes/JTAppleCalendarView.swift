@@ -235,7 +235,9 @@ public class JTAppleCalendarView: UIView {
         var page : Int = 0
         
         if self.direction == .Horizontal {
+           
             page = Int(floor(self.calendarView.contentOffset.x / cvbounds.size.width))
+        
         } else {
             
             var dateGroupHeight = cvbounds.height
@@ -247,10 +249,6 @@ public class JTAppleCalendarView: UIView {
             let contentHeight = dateGroupHeight + preferredHeaderSize.height
             
             page = Int(floor(self.calendarView.contentOffset.y / contentHeight))
-            
-            print("Current Y Offset: \(calendarView.contentOffset.y)")
-            print("Content Height: \(contentHeight)")
-            print("Result Page: \(page)")
         }
         
         let totalSections = monthInfo.count * numberOfSectionsPerMonth
