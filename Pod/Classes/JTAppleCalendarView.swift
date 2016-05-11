@@ -121,15 +121,16 @@ public protocol JTAppleCalendarViewDelegate {
     func calendar(calendar : JTAppleCalendarView, isAboutToDisplayCell cell: JTAppleDayCellView, date:NSDate, cellState: CellState) -> Void
     
     /**
-     Requests the delegate for UINib that will be used as header view.
+     Requests the delegate for UINib that will be used as header view and its corresponding size
      
      - parameter calendar: The `JTAppleCalendarView` that requests to this delegate.
      
      - warning: The returned `UINib` should be a nib of a subclass of `JTAppleCalendarHeaderView`.
      
-     - returns: `UINib` optional.
+     - returns: A tuple of `UINib` optional and `CGSize` value.
      */
-    func headerViewNibForCalendar(calendar : JTAppleCalendarView) -> UINib?
+    
+    func headerViewForCalendar(calendar : JTAppleCalendarView) -> (nib: UINib?, size:CGSize)
     
     /**
      Tells the delegate that the passed `calendar` is about to display passed `headerView`, for corresponding `date`.
@@ -149,7 +150,7 @@ public extension JTAppleCalendarViewDelegate {
     func calendar(calendar : JTAppleCalendarView, didScrollToDateSegmentStartingWith date: NSDate?, endingWithDate: NSDate?) {}
     func calendar(calendar : JTAppleCalendarView, isAboutToDisplayCell cell: JTAppleDayCellView, date:NSDate, cellState: CellState) {}
     
-    func headerViewNibForCalendar(calendar : JTAppleCalendarView) -> UINib? {return nil}
+    func headerViewForCalendar(calendar : JTAppleCalendarView) -> (nib: UINib?, size:CGSize) {return (nil, CGSizeZero)}
     func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView view: JTAppleCalendarHeaderView, date: NSDate) { }
 }
 
@@ -200,15 +201,27 @@ public class JTAppleCalendarView: UIView {
     }
     /// The object that acts as the delegate of the calendar view.
     public var delegate : JTAppleCalendarViewDelegate? {
-        didSet {            
-            if let validDelegate = delegate, let headerNib = validDelegate.headerViewNibForCalendar(self) {
-                
-                calendarView.registerNib(
-                    headerNib,
-                    forSupplementaryViewOfKind: UICollectionElementKindSectionHeader,
-                    withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier
-                )
+        didSet {
+            
+            guard let validDelegate = delegate else {
+                return
             }
+            
+            let (headerNib, headerSize) = validDelegate.headerViewForCalendar(self)
+            
+            guard let validHeaderNib = headerNib else {
+                return
+            }
+            
+            preferredHeaderSize = headerSize
+            
+            calendarView.registerNib(
+                validHeaderNib,
+                forSupplementaryViewOfKind: UICollectionElementKindSectionHeader,
+                withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier
+            )
+            
+            calendarView.collectionViewLayout = generateNewLayout()
         }
     }
     
@@ -334,6 +347,8 @@ public class JTAppleCalendarView: UIView {
      - note: When ignored, the cell size will be calculated from instance's frame and `numberOfRowsPerMonth`.
      */
     public var cellSizeRatio = CGFloat(0)
+    
+    private var preferredHeaderSize = CGSizeZero
     
     lazy private var calendarView : UICollectionView = {
         let layout = JTAppleCalendarHorizontalFlowLayout(withDelegate: self)
@@ -498,12 +513,16 @@ public class JTAppleCalendarView: UIView {
         if direction == .Horizontal {
             let layout = JTAppleCalendarHorizontalFlowLayout(withDelegate: self)
             layout.scrollDirection = direction
+            layout.headerReferenceSize = preferredHeaderSize
+            
             return layout
         } else {
             let layout = JTAppleCalendarVerticalFlowLayout()
             layout.scrollDirection = direction
             layout.minimumInteritemSpacing = 0
             layout.minimumLineSpacing = 0
+            layout.headerReferenceSize = preferredHeaderSize
+            
             return layout
         }
     }
