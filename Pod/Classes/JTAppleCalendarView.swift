@@ -65,6 +65,8 @@ public protocol JTAppleCalendarViewDataSource {
     func configureCalendar(calendar: JTAppleCalendarView) -> (startDate: NSDate, endDate: NSDate, calendar: NSCalendar)
 }
 
+public typealias JTAppleCalendarHeaderView = UICollectionReusableView
+internal let JTAppleCalendarHeaderViewReusableIdentifier = "CalendarHeader"
 
 /// The delegate of a JTAppleCalendarView object must adopt the JTAppleCalendarViewDelegate protocol.
 /// Optional methods of the protocol allow the delegate to manage selections, and configure the cells.
@@ -117,7 +119,28 @@ public protocol JTAppleCalendarViewDelegate {
     ///     - date: The date attached to the cell.
     ///     - cellState: The month the date-cell belongs to.
     func calendar(calendar : JTAppleCalendarView, isAboutToDisplayCell cell: JTAppleDayCellView, date:NSDate, cellState: CellState) -> Void
+    
+    /**
+     Requests the delegate for UINib that will be used as header view.
+     
+     - parameter calendar: The `JTAppleCalendarView` that requests to this delegate.
+     
+     - warning: The returned `UINib` should be a nib of a subclass of `JTAppleCalendarHeaderView`.
+     
+     - returns: `UINib` optional.
+     */
+    func headerViewNibForCalendar(calendar : JTAppleCalendarView) -> UINib?
+    
+    /**
+     Tells the delegate that the passed `calendar` is about to display passed `headerView`, for corresponding `date`.
+     
+     - parameter calendar: The `JTAppleCalendarView` that requests to this delegate.
+     - parameter view:     `JTAppleCalendarHeaderView` instance.
+     - parameter date:     `NSDate` instance.
+     */
+    func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView headerView: JTAppleCalendarHeaderView, date: NSDate)
 }
+
 public extension JTAppleCalendarViewDelegate {
     func calendar(calendar : JTAppleCalendarView, canSelectDate date : NSDate, cell: JTAppleDayCellView, cellState: CellState)->Bool {return true}
     func calendar(calendar : JTAppleCalendarView, canDeselectDate date : NSDate, cell: JTAppleDayCellView, cellState: CellState)->Bool {return true}
@@ -125,6 +148,9 @@ public extension JTAppleCalendarViewDelegate {
     func calendar(calendar : JTAppleCalendarView, didDeselectDate date : NSDate, cell: JTAppleDayCellView?, cellState: CellState) {}
     func calendar(calendar : JTAppleCalendarView, didScrollToDateSegmentStartingWith date: NSDate?, endingWithDate: NSDate?) {}
     func calendar(calendar : JTAppleCalendarView, isAboutToDisplayCell cell: JTAppleDayCellView, date:NSDate, cellState: CellState) {}
+    
+    func headerViewNibForCalendar(calendar : JTAppleCalendarView) -> UINib? {return nil}
+    func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView view: JTAppleCalendarHeaderView, date: NSDate) { }
 }
 
 /// An instance of JTAppleCalendarView (or simply, a calendar view) is a means for displaying and interacting with a gridstyle layout of date-cells
@@ -366,6 +392,15 @@ public class JTAppleCalendarView: UIView {
         self.clipsToBounds = true
         self.calendarView.registerClass(JTAppleDayCell.self, forCellWithReuseIdentifier: cellReuseIdentifier)
         self.addSubview(self.calendarView)
+        
+        if let validDelegate = delegate, let headerNib = validDelegate.headerViewNibForCalendar(self) {
+            
+            calendarView.registerNib(
+                headerNib,
+                forSupplementaryViewOfKind: UICollectionElementKindSectionHeader,
+                withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier
+            )
+        }
     }
     
     /// Let's the calendar know which cell xib to use for the displaying of it's date-cells.
@@ -1007,6 +1042,24 @@ extension JTAppleCalendarView: UICollectionViewDataSource, UICollectionViewDeleg
             let cellState = cellStateFromIndexPath(indexPath)
             delegate.calendar(self, didSelectDate: dateSelectedByUser, cell: selectedCell?.cellView, cellState: cellState)
         }
+    }
+    
+    public func collectionView(collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionReusableView {
+        
+        guard kind == UICollectionElementKindSectionHeader else {
+            return UICollectionReusableView()
+        }
+        
+        guard let headerView = collectionView.dequeueReusableSupplementaryViewOfKind(kind, withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier, forIndexPath: indexPath) as? JTAppleCalendarHeaderView else {
+            assert(false, "Make sure your registered header view is a subclass of JTAppleCalendarHeaderView.")
+            return UICollectionReusableView()
+        }
+        
+        let date = dateFromPath(indexPath)!
+        
+        delegate?.calendar(self, isAboutToDisplayHeaderView: headerView, date: date)
+        
+        return headerView
     }
 }
 
