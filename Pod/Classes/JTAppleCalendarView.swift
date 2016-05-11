@@ -65,6 +65,8 @@ public protocol JTAppleCalendarViewDataSource {
     func configureCalendar(calendar: JTAppleCalendarView) -> (startDate: NSDate, endDate: NSDate, calendar: NSCalendar)
 }
 
+public typealias JTAppleCalendarHeaderView = UICollectionReusableView
+internal let JTAppleCalendarHeaderViewReusableIdentifier = "CalendarHeader"
 
 /// The delegate of a JTAppleCalendarView object must adopt the JTAppleCalendarViewDelegate protocol.
 /// Optional methods of the protocol allow the delegate to manage selections, and configure the cells.
@@ -117,7 +119,30 @@ public protocol JTAppleCalendarViewDelegate {
     ///     - date: The date attached to the cell.
     ///     - cellState: The month the date-cell belongs to.
     func calendar(calendar : JTAppleCalendarView, isAboutToDisplayCell cell: JTAppleDayCellView, date:NSDate, cellState: CellState) -> Void
+    
+    /**
+     Requests the delegate for UINib that will be used as header view and its corresponding size
+     
+     - parameter calendar: The `JTAppleCalendarView` that requests to this delegate.
+     
+     - warning: The returned `UINib` should be a nib of a subclass of `JTAppleCalendarHeaderView`.
+     
+     - returns: A tuple of `UINib` optional and `CGSize` value.
+     */
+    
+    func headerViewForCalendar(calendar : JTAppleCalendarView) -> (nib: UINib?, size:CGSize)
+    
+    /**
+     Tells the delegate that the passed `calendar` is about to display passed `headerView`, for corresponding `date`.
+     
+     - parameter calendar: The `JTAppleCalendarView` that requests to this delegate.
+     - parameter view:     `JTAppleCalendarHeaderView` instance.
+     - parameter date:     `NSDate` instance.
+     - parameter dateOwner: `DateOWner` status of passed `date`.
+     */
+    func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView headerView: JTAppleCalendarHeaderView, date: NSDate, dateOwner: CellState.DateOwner)
 }
+
 public extension JTAppleCalendarViewDelegate {
     func calendar(calendar : JTAppleCalendarView, canSelectDate date : NSDate, cell: JTAppleDayCellView, cellState: CellState)->Bool {return true}
     func calendar(calendar : JTAppleCalendarView, canDeselectDate date : NSDate, cell: JTAppleDayCellView, cellState: CellState)->Bool {return true}
@@ -125,6 +150,9 @@ public extension JTAppleCalendarViewDelegate {
     func calendar(calendar : JTAppleCalendarView, didDeselectDate date : NSDate, cell: JTAppleDayCellView?, cellState: CellState) {}
     func calendar(calendar : JTAppleCalendarView, didScrollToDateSegmentStartingWith date: NSDate?, endingWithDate: NSDate?) {}
     func calendar(calendar : JTAppleCalendarView, isAboutToDisplayCell cell: JTAppleDayCellView, date:NSDate, cellState: CellState) {}
+    
+    func headerViewForCalendar(calendar : JTAppleCalendarView) -> (nib: UINib?, size:CGSize) {return (nil, CGSizeZero)}
+    func calendar(calendar : JTAppleCalendarView, isAboutToDisplayHeaderView view: JTAppleCalendarHeaderView, date: NSDate, dateOwner: CellState.DateOwner) { }
 }
 
 /// An instance of JTAppleCalendarView (or simply, a calendar view) is a means for displaying and interacting with a gridstyle layout of date-cells
@@ -173,7 +201,30 @@ public class JTAppleCalendarView: UIView {
         }
     }
     /// The object that acts as the delegate of the calendar view.
-    public var delegate : JTAppleCalendarViewDelegate?
+    public var delegate : JTAppleCalendarViewDelegate? {
+        didSet {
+            
+            guard let validDelegate = delegate else {
+                return
+            }
+            
+            let (headerNib, headerSize) = validDelegate.headerViewForCalendar(self)
+            
+            guard let validHeaderNib = headerNib else {
+                return
+            }
+            
+            preferredHeaderSize = headerSize
+            
+            calendarView.registerNib(
+                validHeaderNib,
+                forSupplementaryViewOfKind: UICollectionElementKindSectionHeader,
+                withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier
+            )
+            
+            calendarView.collectionViewLayout = generateNewLayout()
+        }
+    }
     
     private var scrollToDatePathOnRowChange: NSDate?
     private var delayedExecutionClosure: (()->Void)?
@@ -291,11 +342,14 @@ public class JTAppleCalendarView: UIView {
     }
     
     /**  
-     Specifies custom cell size. Might be useful if you're using `.Vertical` scrolling direction. Will be ignored for `CGSizeZero`, which is its default value.
+     Specifies cell `width` : `height` ratio. Might be useful if you don't want your cell height gets compressed when using `.Vertical` scrolling direction.
      
-     - note: When ignored, the cell size will be configured by number of rows and current instance's `frame`.
+     - note: Ignores any value from zero to below. Has default value of zero.
+     - note: When ignored, the cell size will be calculated from instance's frame and `numberOfRowsPerMonth`.
      */
-    public var customCellSize = CGSizeZero
+    public var cellSizeRatio = CGFloat(0)
+    
+    private var preferredHeaderSize = CGSizeZero
     
     lazy private var calendarView : UICollectionView = {
         let layout = JTAppleCalendarHorizontalFlowLayout(withDelegate: self)
@@ -316,14 +370,18 @@ public class JTAppleCalendarView: UIView {
     
     private func updateLayoutItemSize (layout: JTAppleCalendarLayoutProtocol) {
         
-        if CGSizeEqualToSize(customCellSize, CGSizeZero) {
-            layout.itemSize = CGSizeMake(
-                self.calendarView.frame.size.width / CGFloat(MAX_NUMBER_OF_DAYS_IN_WEEK),
-                (self.calendarView.frame.size.height - layout.headerReferenceSize.height) / CGFloat(numberOfRowsPerMonth)
-            )
+        let calendarViewSize = self.calendarView.frame.size
+        
+        let itemWidth = calendarViewSize.width / CGFloat(MAX_NUMBER_OF_DAYS_IN_WEEK)
+        var itemHeight = CGFloat(0)
+        
+        if cellSizeRatio > CGFloat(0) {
+            itemHeight = itemWidth / cellSizeRatio
         } else {
-            layout.itemSize = customCellSize
+            itemHeight = (calendarViewSize.height - layout.headerReferenceSize.height) / CGFloat(numberOfRowsPerMonth)
         }
+        
+        layout.itemSize = CGSizeMake(itemWidth, itemHeight)
         
         self.calendarView.collectionViewLayout = layout as! UICollectionViewLayout
     }
@@ -456,12 +514,16 @@ public class JTAppleCalendarView: UIView {
         if direction == .Horizontal {
             let layout = JTAppleCalendarHorizontalFlowLayout(withDelegate: self)
             layout.scrollDirection = direction
+            layout.headerReferenceSize = preferredHeaderSize
+            
             return layout
         } else {
             let layout = JTAppleCalendarVerticalFlowLayout()
             layout.scrollDirection = direction
             layout.minimumInteritemSpacing = 0
             layout.minimumLineSpacing = 0
+            layout.headerReferenceSize = preferredHeaderSize
+            
             return layout
         }
     }
@@ -788,13 +850,12 @@ public class JTAppleCalendarView: UIView {
 extension JTAppleCalendarView: UIScrollViewDelegate {
     /// Tells the delegate when a scrolling animation in the scroll view concludes.
     public func scrollViewDidEndScrollingAnimation(scrollView: UIScrollView) {
-        scrollViewDidEndDecelerating(scrollView)
         delayedExecutionClosure?()
         delayedExecutionClosure = nil
     }
     
     /// Tells the delegate that the scroll view has ended decelerating the scrolling movement.
-    public func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
+    public func scrollViewDidScroll(scrollView: UIScrollView) {
         
         // Determing the section from the scrollView direction
         let section = currentSectionPage
@@ -933,7 +994,7 @@ extension JTAppleCalendarView: UICollectionViewDataSource, UICollectionViewDeleg
         }
         
         if monthInfo.count > 0 {
-            self.scrollViewDidEndDecelerating(self.calendarView)
+            self.scrollViewDidScroll(self.calendarView)
         }
         return monthInfo.count
     }
@@ -947,12 +1008,12 @@ extension JTAppleCalendarView: UICollectionViewDataSource, UICollectionViewDeleg
         if let
             dateUserSelected = dateFromPath(indexPath),
             delegate = self.delegate,
-            cell = collectionView.cellForItemAtIndexPath(indexPath) as? JTAppleDayCell {
-            if cellWasNotDisabledByTheUser(cell) {
-                let cellState = cellStateFromIndexPath(indexPath)
-                delegate.calendar(self, canSelectDate: dateUserSelected, cell: cell.cellView, cellState: cellState)
-                return true
-            }
+            cell = collectionView.cellForItemAtIndexPath(indexPath) as? JTAppleDayCell
+           where
+            cellWasNotDisabledByTheUser(cell) {
+            
+            let cellState = cellStateFromIndexPath(indexPath)
+            return delegate.calendar(self, canSelectDate: dateUserSelected, cell: cell.cellView, cellState: cellState)
         }
         
         return false // if date is out of scope
@@ -1002,6 +1063,30 @@ extension JTAppleCalendarView: UICollectionViewDataSource, UICollectionViewDeleg
             let cellState = cellStateFromIndexPath(indexPath)
             delegate.calendar(self, didSelectDate: dateSelectedByUser, cell: selectedCell?.cellView, cellState: cellState)
         }
+    }
+    
+    public func collectionView(collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionReusableView {
+        
+        guard kind == UICollectionElementKindSectionHeader else {
+            return UICollectionReusableView()
+        }
+        
+        guard let headerView = collectionView.dequeueReusableSupplementaryViewOfKind(kind, withReuseIdentifier: JTAppleCalendarHeaderViewReusableIdentifier, forIndexPath: indexPath) as? JTAppleCalendarHeaderView else {
+            
+            assert(false, "Make sure your registered header view is a subclass of JTAppleCalendarHeaderView.")
+            return UICollectionReusableView()
+        }
+        
+        
+        guard let validDate = dateFromPath(indexPath) else {
+            return UICollectionReusableView()
+        }
+        
+        let dateOwner = cellStateFromIndexPath(indexPath).dateBelongsTo
+        
+        delegate?.calendar(self, isAboutToDisplayHeaderView: headerView, date: validDate, dateOwner: dateOwner)
+        
+        return headerView
     }
 }
 
