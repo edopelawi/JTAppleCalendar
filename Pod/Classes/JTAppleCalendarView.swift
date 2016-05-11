@@ -291,12 +291,12 @@ public class JTAppleCalendarView: UIView {
     }
     
     /**  
-     Specifies custom cell `width` : `height` ratio. Might be useful if you don't want your cell height gets compressed when using `.Vertical` scrolling direction.
+     Specifies cell `width` : `height` ratio. Might be useful if you don't want your cell height gets compressed when using `.Vertical` scrolling direction.
      
      - note: Ignores any value from zero to below. Has default value of zero.
      - note: When ignored, the cell size will be calculated from instance's frame and `numberOfRowsPerMonth`.
      */
-    public var customCellSizeRatio = CGFloat(0)
+    public var cellSizeRatio = CGFloat(0)
     
     lazy private var calendarView : UICollectionView = {
         let layout = JTAppleCalendarHorizontalFlowLayout(withDelegate: self)
@@ -322,8 +322,8 @@ public class JTAppleCalendarView: UIView {
         let itemWidth = calendarViewSize.width / CGFloat(MAX_NUMBER_OF_DAYS_IN_WEEK)
         var itemHeight = CGFloat(0)
         
-        if customCellSizeRatio > CGFloat(0) {
-            itemHeight = itemWidth / customCellSizeRatio
+        if cellSizeRatio > CGFloat(0) {
+            itemHeight = itemWidth / cellSizeRatio
         } else {
             itemHeight = (calendarViewSize.height - layout.headerReferenceSize.height) / CGFloat(numberOfRowsPerMonth)
         }
