@@ -237,7 +237,14 @@ public class JTAppleCalendarView: UIView {
         if self.direction == .Horizontal {
             page = Int(floor(self.calendarView.contentOffset.x / cvbounds.size.width))
         } else {
-            page = Int(floor(self.calendarView.contentOffset.y / (cvbounds.size.height + preferredHeaderSize.height)))
+            
+            let contentHeight = cvbounds.size.height + preferredHeaderSize.height
+            
+            page = Int(floor(self.calendarView.contentOffset.y / contentHeight))
+            
+            print("Current Y Offset: \(calendarView.contentOffset.y)")
+            print("Content Height: \(contentHeight)")
+            print("Result Page: \(page)")
         }
         
         let totalSections = monthInfo.count * numberOfSectionsPerMonth
