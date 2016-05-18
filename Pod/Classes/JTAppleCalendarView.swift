@@ -447,7 +447,16 @@ public class JTAppleCalendarView: UIView {
     public func reloadData() {
         reloadData(true)
     }
-    
+	
+	/**
+	 Forcefully call this instance's `delegate` for its `configureCalendar(_:)` method.
+	*/
+	public func reconfigureCalendar() {
+		// TODO: this was made because the public `reloadData` method doesn't reload the dates.
+		monthInfo = setupMonthInfoDataForStartAndEndDate()
+		reloadData(false)
+	}
+	
     private func reloadData(checkDelegateDataSource: Bool) {
         
         if checkDelegateDataSource {
@@ -542,6 +551,7 @@ public class JTAppleCalendarView: UIView {
             return layout
         }
     }
+	
     private func setupMonthInfoDataForStartAndEndDate()-> [[Int]] {
         
         var retval: [[Int]] = []
