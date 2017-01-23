@@ -19,9 +19,9 @@ public class JTAppleDayCell: UICollectionViewCell {
         let vFrame = CGRectInset(self.frame, internalCellInset.x, internalCellInset.y)
         
         let viewObject = NSBundle.mainBundle().loadNibNamed(cellViewXibName!, owner: self, options: [:])
-        assert(viewObject.count > 0, "your nib file name \(cellViewXibName) could not be loaded)")
+        assert(viewObject?.count > 0, "your nib file name \(cellViewXibName) could not be loaded)")
         
-        guard let view = viewObject[0] as? JTAppleDayCellView else {
+        guard let view = viewObject?.first as? JTAppleDayCellView else {
             print("xib file class does not conform to the protocol<JTAppleDayCellViewProtocol>")
             assert(false )
             return
